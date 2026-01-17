@@ -46,6 +46,12 @@ func (n *Notifier) printConsole(d types.DetectedTrade) {
 	fmt.Printf("Side: %s\n", strings.ToUpper(d.Side))
 	fmt.Printf("Size: %.2f @ %.4f\n", d.Size, d.Price)
 	fmt.Printf("Value: $%.2f\n", d.UsdValue)
+	if d.Trader != "" {
+		fmt.Printf("Trader: %s\n", d.Trader)
+	}
+	if d.Wallet != "" {
+		fmt.Printf("Wallet: %s\n", d.Wallet)
+	}
 	fmt.Printf("Reason: %s\n", d.Reason)
 	fmt.Printf("URL: https://polymarket.com/event/%s\n", d.Market.Slug)
 	fmt.Printf("Time: %s\n", ts.Format(time.RFC3339))
@@ -69,14 +75,7 @@ func (n *Notifier) sendWebhook(d types.DetectedTrade) {
 				"title": d.Market.Question,
 				"url":   fmt.Sprintf("https://polymarket.com/event/%s", d.Market.Slug),
 				"color": color,
-				"fields": []map[string]interface{}{
-					{"name": "Outcome", "value": outcome, "inline": true},
-					{"name": "Side", "value": strings.ToUpper(d.Side), "inline": true},
-					{"name": "Value", "value": fmt.Sprintf("$%.2f", d.UsdValue), "inline": true},
-					{"name": "Size", "value": fmt.Sprintf("%.2f", d.Size), "inline": true},
-					{"name": "Price", "value": fmt.Sprintf("%.4f", d.Price), "inline": true},
-					{"name": "Reason", "value": d.Reason, "inline": false},
-				},
+				"fields": buildWebhookFields(d, outcome),
 				"timestamp": ts.Format(time.RFC3339),
 			},
 		},
@@ -93,6 +92,28 @@ func (n *Notifier) sendWebhook(d types.DetectedTrade) {
 	if resp.StatusCode >= 400 {
 		log.Printf("[Webhook] Failed: %d", resp.StatusCode)
 	}
+}
+
+func buildWebhookFields(d types.DetectedTrade, outcome string) []map[string]interface{} {
+	fields := []map[string]interface{}{
+		{"name": "Outcome", "value": outcome, "inline": true},
+		{"name": "Side", "value": strings.ToUpper(d.Side), "inline": true},
+		{"name": "Value", "value": fmt.Sprintf("$%.2f", d.UsdValue), "inline": true},
+		{"name": "Size", "value": fmt.Sprintf("%.2f", d.Size), "inline": true},
+		{"name": "Price", "value": fmt.Sprintf("%.4f", d.Price), "inline": true},
+	}
+	if d.Trader != "" {
+		fields = append(fields, map[string]interface{}{"name": "Trader", "value": d.Trader, "inline": true})
+	}
+	if d.Wallet != "" {
+		wallet := d.Wallet
+		if len(wallet) > 16 {
+			wallet = wallet[:16] + "..."
+		}
+		fields = append(fields, map[string]interface{}{"name": "Wallet", "value": wallet, "inline": true})
+	}
+	fields = append(fields, map[string]interface{}{"name": "Reason", "value": d.Reason, "inline": false})
+	return fields
 }
 
 func getOutcome(market *types.Market, assetID string) string {

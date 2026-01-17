@@ -100,6 +100,8 @@ type DetectedTrade struct {
 	UsdValue  float64
 	Timestamp string
 	Reason    string
+	Wallet    string
+	Trader    string
 }
 
 type OrderBook struct {

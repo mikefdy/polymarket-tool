@@ -145,6 +145,10 @@ func (d *Detector) ProcessHistoricalTrade(trade types.Trade) bool {
 	reasons := d.checkDetectionCriteria(market, trade.Asset, usdValue, trade.ProxyWallet)
 
 	if len(reasons) > 0 {
+		trader := trade.Name
+		if trader == "" {
+			trader = trade.Pseudonym
+		}
 		d.onDetection(types.DetectedTrade{
 			Market:    market,
 			AssetID:   trade.Asset,
@@ -154,6 +158,8 @@ func (d *Detector) ProcessHistoricalTrade(trade types.Trade) bool {
 			UsdValue:  usdValue,
 			Timestamp: strconv.FormatInt(trade.Timestamp*1000, 10),
 			Reason:    "[HISTORICAL] " + strings.Join(reasons, " | "),
+			Wallet:    trade.ProxyWallet,
+			Trader:    trader,
 		})
 		return true
 	}
