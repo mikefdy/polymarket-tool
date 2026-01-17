@@ -35,6 +35,10 @@ func main() {
 		cmdStart()
 	case "add-market":
 		cmdAddMarket(args)
+	case "markets":
+		cmdMarkets(args)
+	case "fat-trades":
+		cmdFatTrades(args)
 	case "discover-whales":
 		cmdDiscoverWhales(args)
 	case "whale-trades":
@@ -57,16 +61,20 @@ Usage:
   polymarket-tool <command> [arguments]
 
 Commands:
-  start                Start the tracker
-  add-market <url>     Add a market by URL or slug
-  discover-whales      Discover and add whales from leaderboard
-  whale-trades [name]  View recent trades for tracked whales
-  list <type>          List whales or markets
-  help                 Show this help
+  start                 Start real-time tracker
+  markets [query]       Search and add markets interactively
+  add-market <url>      Add a market by URL or slug
+  fat-trades [min-usd]  Scan historical trades for your markets
+  discover-whales       Discover and add whales from leaderboard
+  whale-trades [name]   View recent trades for tracked whales
+  list <type>           List whales or markets
+  help                  Show this help
 
 Examples:
   polymarket-tool start
+  polymarket-tool markets fed
   polymarket-tool add-market https://polymarket.com/event/fed-decision
+  polymarket-tool fat-trades 5000
   polymarket-tool discover-whales top10
   polymarket-tool whale-trades beachboy4
   polymarket-tool list whales`)
@@ -104,7 +112,6 @@ func cmdStart() {
 	}
 
 	refresh()
-	scanHistoricalTrades(apiClient, detect)
 
 	if err := wsClient.Connect(); err != nil {
 		log.Fatalf("WebSocket connection failed: %v", err)
@@ -169,33 +176,232 @@ func discoverMarkets(cfg *config.Config, apiClient *api.Client, savedMarkets []t
 	return result
 }
 
-func scanHistoricalTrades(apiClient *api.Client, detect *detector.Detector) {
-	fmt.Println("[Historical] Fetching recent trades...")
+// ============= FAT-TRADES COMMAND =============
 
-	trades, err := apiClient.GetRecentTrades(1000)
-	if err != nil {
-		fmt.Printf("[Historical] Scan failed: %v\n", err)
+func cmdFatTrades(args []string) {
+	cfg := config.Load()
+
+	minUSD := cfg.MinTradeUSD
+	if len(args) > 0 {
+		if v, err := strconv.ParseFloat(args[0], 64); err == nil {
+			minUSD = v
+		}
+	}
+
+	savedMarkets, _ := storage.LoadMarkets()
+	if len(savedMarkets) == 0 {
+		fmt.Println("No markets saved. Run: polymarket-tool add-market <url>")
 		return
 	}
 
-	watchedIDs := detect.GetWatchedConditionIDs()
-	var relevant []types.Trade
+	fmt.Println("Fat Trades Scanner")
+	fmt.Println("==================")
+	fmt.Printf("Min trade value: $%.0f\n", minUSD)
+	fmt.Printf("Scanning %d saved markets...\n\n", len(savedMarkets))
+
+	apiClient := api.New(cfg)
+
+	// Build condition ID map from saved markets
+	conditionToMarket := make(map[string]*types.Market)
+	for _, sm := range savedMarkets {
+		event, err := apiClient.GetEventBySlug(sm.Slug)
+		if err != nil {
+			continue
+		}
+		for i := range event.Markets {
+			m := &event.Markets[i]
+			if m.ConditionID != "" {
+				conditionToMarket[m.ConditionID] = m
+			}
+		}
+	}
+
+	fmt.Printf("Loaded %d market conditions\n", len(conditionToMarket))
+	fmt.Println("Fetching recent trades...\n")
+
+	trades, err := apiClient.GetRecentTrades(2000)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	// Filter and display fat trades
+	fmt.Println("Fat Trades Found:")
+	fmt.Println(strings.Repeat("=", 90))
+
+	count := 0
 	for _, t := range trades {
-		if watchedIDs[t.ConditionID] {
-			relevant = append(relevant, t)
+		market := conditionToMarket[t.ConditionID]
+		if market == nil {
+			continue
+		}
+
+		usdValue := t.Price * t.Size
+		if usdValue < minUSD {
+			continue
+		}
+
+		count++
+		trader := t.Name
+		if trader == "" {
+			trader = t.Pseudonym
+		}
+		if trader == "" && t.ProxyWallet != "" {
+			trader = t.ProxyWallet[:12] + "..."
+		}
+
+		timeStr := formatTimeAgo(t.Timestamp)
+		title := market.Question
+		if len(title) > 45 {
+			title = title[:45] + "..."
+		}
+
+		fmt.Printf("\n%s | %s | %s\n", timeStr, strings.ToUpper(t.Side), formatUSD(usdValue))
+		fmt.Printf("  Market: %s\n", title)
+		fmt.Printf("  Trader: %s\n", trader)
+		fmt.Printf("  Wallet: %s\n", t.ProxyWallet)
+	}
+
+	fmt.Println()
+	fmt.Println(strings.Repeat("=", 90))
+	fmt.Printf("Found %d fat trades (>$%.0f) in your markets\n", count, minUSD)
+}
+
+// ============= MARKETS COMMAND =============
+
+func cmdMarkets(args []string) {
+	var query string
+	if len(args) > 0 {
+		query = strings.Join(args, " ")
+	} else {
+		fmt.Print("Enter search query: ")
+		reader := bufio.NewReader(os.Stdin)
+		query, _ = reader.ReadString('\n')
+		query = strings.TrimSpace(query)
+	}
+
+	if query == "" {
+		fmt.Println("No query provided")
+		return
+	}
+
+	cfg := config.Load()
+	apiClient := api.New(cfg)
+
+	fmt.Printf("\nSearching for: %s\n\n", query)
+
+	markets, err := apiClient.SearchMarkets(query)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	if len(markets) == 0 {
+		fmt.Println("No markets found")
+		return
+	}
+
+	// Group by event slug to avoid duplicates
+	eventSlugs := make(map[string]types.Market)
+	for _, m := range markets {
+		if m.Slug != "" {
+			eventSlugs[m.Slug] = m
 		}
 	}
 
-	fmt.Printf("[Historical] Found %d/%d trades in watched markets\n", len(relevant), len(trades))
+	// Load existing markets to check status
+	savedMarkets, _ := storage.LoadMarkets()
+	savedSlugs := make(map[string]bool)
+	for _, sm := range savedMarkets {
+		savedSlugs[sm.Slug] = true
+	}
 
-	detected := 0
-	for _, t := range relevant {
-		if detect.ProcessHistoricalTrade(t) {
-			detected++
+	// Display markets
+	fmt.Println("  #  | Market                                           | Volume       | Status")
+	fmt.Println("-----+--------------------------------------------------+--------------+--------")
+
+	idx := 0
+	slugList := make([]string, 0, len(eventSlugs))
+	for slug, m := range eventSlugs {
+		idx++
+		status := ""
+		if savedSlugs[slug] {
+			status = "✓ saved"
+		}
+
+		title := m.Question
+		if len(title) > 48 {
+			title = title[:48]
+		}
+
+		vol := 0.0
+		if v, err := strconv.ParseFloat(m.Volume, 64); err == nil {
+			vol = v
+		}
+
+		fmt.Printf("  %2d | %-48s | %12s | %s\n", idx, title, formatUSD(vol), status)
+		slugList = append(slugList, slug)
+	}
+
+	fmt.Println()
+	fmt.Print("Enter numbers to add (comma-separated), 'all', or press Enter to cancel: ")
+	reader := bufio.NewReader(os.Stdin)
+	selection, _ := reader.ReadString('\n')
+	selection = strings.TrimSpace(selection)
+
+	if selection == "" {
+		return
+	}
+
+	var toAdd []string
+
+	switch {
+	case strings.ToLower(selection) == "all":
+		for slug := range eventSlugs {
+			if !savedSlugs[slug] {
+				toAdd = append(toAdd, slug)
+			}
+		}
+	default:
+		nums := strings.Split(selection, ",")
+		for _, n := range nums {
+			idx, err := strconv.Atoi(strings.TrimSpace(n))
+			if err == nil && idx > 0 && idx <= len(slugList) {
+				slug := slugList[idx-1]
+				if !savedSlugs[slug] {
+					toAdd = append(toAdd, slug)
+				}
+			}
 		}
 	}
 
-	fmt.Printf("[Historical] Detected %d fat trades\n", detected)
+	if len(toAdd) == 0 {
+		fmt.Println("No new markets to add.")
+		return
+	}
+
+	fmt.Printf("\nAdding %d markets...\n", len(toAdd))
+
+	for _, slug := range toAdd {
+		m := eventSlugs[slug]
+		title := m.Question
+		if len(title) > 50 {
+			title = title[:50] + "..."
+		}
+
+		added, _ := storage.AddMarket(types.SavedMarket{
+			Slug:    slug,
+			Title:   m.Question,
+			AddedAt: time.Now().Format(time.RFC3339),
+		})
+
+		if added {
+			fmt.Printf("  ✓ Added: %s\n", title)
+		}
+	}
+
+	markets2, _ := storage.LoadMarkets()
+	fmt.Printf("\nNow tracking %d markets total.\n", len(markets2))
 }
 
 // ============= ADD-MARKET COMMAND =============

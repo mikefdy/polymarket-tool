@@ -58,7 +58,7 @@ polymarket-tool start
 
 ### `start`
 
-Starts the tracker. Monitors all watched markets for fat trades via WebSocket.
+Starts the real-time tracker. Monitors all watched markets for fat trades via WebSocket.
 
 ```bash
 # Basic
@@ -71,9 +71,22 @@ MIN_TRADE_USD=500 polymarket-tool start
 WEBHOOK_URL=https://discord.com/api/webhooks/... polymarket-tool start
 ```
 
+### `markets [query]`
+
+Search for markets and interactively add them to your watch list.
+
+```bash
+# Interactive search
+polymarket-tool markets
+
+# Search with query
+polymarket-tool markets fed
+polymarket-tool markets trump tariffs
+```
+
 ### `add-market <url>`
 
-Add a Polymarket event to your watch list.
+Add a Polymarket event directly by URL or slug.
 
 ```bash
 # By URL
@@ -81,6 +94,19 @@ polymarket-tool add-market https://polymarket.com/event/fed-decision-in-january
 
 # By slug
 polymarket-tool add-market fed-decision-in-january
+```
+
+### `fat-trades [min-usd]`
+
+Scan historical trades for your saved markets and show fat trades.
+
+```bash
+# Use default threshold ($1000)
+polymarket-tool fat-trades
+
+# Custom threshold
+polymarket-tool fat-trades 5000
+polymarket-tool fat-trades 500
 ```
 
 ### `discover-whales [selection]`
