@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -330,22 +331,45 @@ func cmdMarkets(args []string) {
 		savedSlugs[sm.Slug] = true
 	}
 
+	// Create sorted list of slugs by volume
+	slugList := make([]string, 0, len(eventMap))
+	for eventSlug := range eventMap {
+		slugList = append(slugList, eventSlug)
+	}
+	
+	// Sort slugList by volume (highest first)
+	sort.Slice(slugList, func(i, j int) bool {
+		volI, _ := strconv.ParseFloat(eventMap[slugList[i]].Volume, 64)
+		volJ, _ := strconv.ParseFloat(eventMap[slugList[j]].Volume, 64)
+		return volI > volJ
+	})
+
 	// Display events
-	fmt.Println("  #  | Event                                            | Volume       | Status")
-	fmt.Println("-----+--------------------------------------------------+--------------+--------")
+	fmt.Println("  #  | Event                                                                | Volume       | End Date")
+	fmt.Println("-----+----------------------------------------------------------------------+--------------+------------")
 
 	idx := 0
-	slugList := make([]string, 0, len(eventMap))
-	for eventSlug, m := range eventMap {
+	for _, eventSlug := range slugList {
 		idx++
-		status := ""
-		if savedSlugs[eventSlug] {
-			status = "✓ saved"
+		m := eventMap[eventSlug]
+		
+		// Format end date
+		endDate := "N/A"
+		if m.EndDate != "" {
+			if t, err := time.Parse(time.RFC3339, m.EndDate); err == nil {
+				endDate = t.Format("Jan 02 2006")
+			}
 		}
-
+		
+		// Show saved status with checkmark
 		title := m.EventTitle()
-		if len(title) > 48 {
-			title = title[:48]
+		if savedSlugs[eventSlug] {
+			title = "✓ " + title
+		}
+		
+		// Expand title width to 68 characters
+		if len(title) > 68 {
+			title = title[:65] + "..."
 		}
 
 		vol := 0.0
@@ -353,8 +377,7 @@ func cmdMarkets(args []string) {
 			vol = v
 		}
 
-		fmt.Printf("  %2d | %-48s | %12s | %s\n", idx, title, formatUSD(vol), status)
-		slugList = append(slugList, eventSlug)
+		fmt.Printf("  %2d | %-68s | %12s | %s\n", idx, title, formatUSD(vol), endDate)
 	}
 
 	fmt.Println()

@@ -17,6 +17,7 @@ type Market struct {
 	Active      bool          `json:"active"`
 	Closed      bool          `json:"closed"`
 	CreatedAt   string        `json:"createdAt"`
+	EndDate     string        `json:"endDate"`
 	Events      []MarketEvent `json:"events"`
 }
 
@@ -41,6 +42,15 @@ type Event struct {
 	Volume    float64  `json:"volume"`
 	Liquidity float64  `json:"liquidity"`
 	Markets   []Market `json:"markets"`
+	Active    bool     `json:"active"`
+	Closed    bool     `json:"closed"`
+	StartDate string   `json:"startDate"`
+	EndDate   string   `json:"endDate"`
+}
+
+type SearchResponse struct {
+	Events  []Event `json:"events"`
+	Markets []Market `json:"markets"`
 }
 
 type Trade struct {
