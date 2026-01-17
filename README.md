@@ -10,23 +10,27 @@ Download the latest binary for your platform from [Releases](https://github.com/
 ```bash
 curl -L -o polymarket-tool https://github.com/mikefdy/polymarket-tool/releases/latest/download/polymarket-tool-darwin-arm64
 chmod +x polymarket-tool
+sudo mv polymarket-tool /usr/local/bin/
 ```
 
 **macOS (Intel):**
 ```bash
 curl -L -o polymarket-tool https://github.com/mikefdy/polymarket-tool/releases/latest/download/polymarket-tool-darwin-amd64
 chmod +x polymarket-tool
+sudo mv polymarket-tool /usr/local/bin/
 ```
 
 **Linux:**
 ```bash
 curl -L -o polymarket-tool https://github.com/mikefdy/polymarket-tool/releases/latest/download/polymarket-tool-linux
 chmod +x polymarket-tool
+sudo mv polymarket-tool /usr/local/bin/
 ```
 
 **Windows (PowerShell):**
 ```powershell
 Invoke-WebRequest -Uri https://github.com/mikefdy/polymarket-tool/releases/latest/download/polymarket-tool.exe -OutFile polymarket-tool.exe
+Move-Item polymarket-tool.exe C:\Windows\System32\
 ```
 
 ### Build from source
@@ -41,13 +45,13 @@ go build -o polymarket-tool .
 
 ```bash
 # Add a market to watch
-./polymarket-tool add-market https://polymarket.com/event/fed-decision-in-january
+polymarket-tool add-market https://polymarket.com/event/fed-decision-in-january
 
 # Add top traders to whale list
-./polymarket-tool discover-whales top10
+polymarket-tool discover-whales top10
 
 # Start tracking
-./polymarket-tool start
+polymarket-tool start
 ```
 
 ## Commands
@@ -58,13 +62,13 @@ Starts the tracker. Monitors all watched markets for fat trades via WebSocket.
 
 ```bash
 # Basic
-./polymarket-tool start
+polymarket-tool start
 
 # With custom thresholds
-MIN_TRADE_USD=500 ./polymarket-tool start
+MIN_TRADE_USD=500 polymarket-tool start
 
 # With Discord/Slack webhook
-WEBHOOK_URL=https://discord.com/api/webhooks/... ./polymarket-tool start
+WEBHOOK_URL=https://discord.com/api/webhooks/... polymarket-tool start
 ```
 
 ### `add-market <url>`
@@ -73,10 +77,10 @@ Add a Polymarket event to your watch list.
 
 ```bash
 # By URL
-./polymarket-tool add-market https://polymarket.com/event/fed-decision-in-january
+polymarket-tool add-market https://polymarket.com/event/fed-decision-in-january
 
 # By slug
-./polymarket-tool add-market fed-decision-in-january
+polymarket-tool add-market fed-decision-in-january
 ```
 
 ### `discover-whales [selection]`
@@ -85,17 +89,17 @@ Fetch the Polymarket leaderboard and add profitable traders to your whale list.
 
 ```bash
 # Interactive mode
-./polymarket-tool discover-whales
+polymarket-tool discover-whales
 
 # Add top N traders
-./polymarket-tool discover-whales top5
-./polymarket-tool discover-whales top20
+polymarket-tool discover-whales top5
+polymarket-tool discover-whales top20
 
 # Add specific ranks
-./polymarket-tool discover-whales 1,2,3
+polymarket-tool discover-whales 1,2,3
 
 # Add all untracked
-./polymarket-tool discover-whales all
+polymarket-tool discover-whales all
 ```
 
 ### `whale-trades [name] [limit]`
@@ -104,16 +108,16 @@ View recent trades for tracked whales.
 
 ```bash
 # All whales (default 20 trades each)
-./polymarket-tool whale-trades
+polymarket-tool whale-trades
 
 # Specific whale by name
-./polymarket-tool whale-trades beachboy4
+polymarket-tool whale-trades beachboy4
 
 # With custom limit
-./polymarket-tool whale-trades beachboy4 50
+polymarket-tool whale-trades beachboy4 50
 
 # By index (from list)
-./polymarket-tool whale-trades 1
+polymarket-tool whale-trades 1
 ```
 
 ### `list <type>`
@@ -122,16 +126,16 @@ View and manage tracked whales and markets.
 
 ```bash
 # List tracked whales
-./polymarket-tool list whales
+polymarket-tool list whales
 
 # List saved markets
-./polymarket-tool list markets
+polymarket-tool list markets
 
 # Remove a whale
-./polymarket-tool list remove-whale 0x123...
+polymarket-tool list remove-whale 0x123...
 
 # Remove a market
-./polymarket-tool list remove-market fed-decision-in-january
+polymarket-tool list remove-market fed-decision-in-january
 ```
 
 ## Configuration
@@ -194,16 +198,16 @@ Set `WEBHOOK_URL` to receive rich embed notifications with trade details.
 ### Track a specific event
 
 ```bash
-./polymarket-tool add-market https://polymarket.com/event/trump-tariffs-china
-./polymarket-tool start
+polymarket-tool add-market https://polymarket.com/event/trump-tariffs-china
+polymarket-tool start
 ```
 
 ### Monitor whale activity on Fed decisions
 
 ```bash
-./polymarket-tool add-market https://polymarket.com/event/fed-decision-in-january
-./polymarket-tool discover-whales top10
-MIN_TRADE_USD=100 ./polymarket-tool start
+polymarket-tool add-market https://polymarket.com/event/fed-decision-in-january
+polymarket-tool discover-whales top10
+MIN_TRADE_USD=100 polymarket-tool start
 ```
 
 ### Low-threshold monitoring with Discord alerts
@@ -212,7 +216,7 @@ MIN_TRADE_USD=100 ./polymarket-tool start
 MIN_TRADE_USD=50 \
 MIN_LIQUIDITY_RATIO=0.02 \
 WEBHOOK_URL=https://discord.com/api/webhooks/xxx/yyy \
-./polymarket-tool start
+polymarket-tool start
 ```
 
 ## Building from Source
