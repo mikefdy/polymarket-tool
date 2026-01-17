@@ -55,29 +55,39 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println(`Polymarket Tool
+	fmt.Println(`Polymarket Tool - Real-time detection of large trades on Polymarket
 
 Usage:
   polymarket-tool <command> [arguments]
 
 Commands:
-  start                 Start real-time tracker
-  markets [query]       Search and add markets interactively
-  add-market <url>      Add a market by URL or slug
-  fat-trades [min-usd]  Scan historical trades for your markets
-  discover-whales       Discover and add whales from leaderboard
-  whale-trades [name]   View recent trades for tracked whales
-  list <type>           List whales or markets
-  help                  Show this help
+  start                   Start real-time WebSocket tracker
+  markets [query]         Search and add markets interactively
+  add-market <url>        Add a market by URL or slug
+  fat-trades [min-usd]    Scan historical trades for saved markets
+  discover-whales [sel]   Add whales from leaderboard (top10, all, 1,2,3)
+  whale-trades [name]     View recent trades for tracked whales
+  list whales             List tracked whales
+  list markets            List saved markets
+  list clear-whales       Remove all tracked whales
+  list clear-markets      Remove all saved markets
+  list remove-whale <addr>    Remove a specific whale
+  list remove-market <slug>   Remove a specific market
+  help                    Show this help
+
+Environment Variables:
+  MIN_TRADE_USD           Minimum trade value (default: 1000)
+  MIN_LIQUIDITY_RATIO     Min trade as % of orderbook (default: 0.05)
+  WEBHOOK_URL             Discord/Slack webhook for notifications
+  SEARCH_QUERIES          Comma-separated market search terms
 
 Examples:
-  polymarket-tool start
-  polymarket-tool markets fed
-  polymarket-tool add-market https://polymarket.com/event/fed-decision
-  polymarket-tool fat-trades 5000
-  polymarket-tool discover-whales top10
-  polymarket-tool whale-trades beachboy4
-  polymarket-tool list whales`)
+  polymarket-tool markets fed                     # Search and add markets
+  polymarket-tool add-market fed-decision         # Add by slug
+  polymarket-tool discover-whales top10           # Track top 10 traders
+  polymarket-tool fat-trades 500                  # Find trades > $500
+  polymarket-tool start                           # Start real-time tracking
+  MIN_TRADE_USD=100 polymarket-tool start         # Custom threshold`)
 }
 
 // ============= START COMMAND =============
