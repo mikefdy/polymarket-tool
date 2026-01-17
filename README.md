@@ -4,11 +4,38 @@ Real-time detection of large and early trades on Polymarket. Track specific mark
 
 ## Installation
 
+Download the latest binary for your platform from [Releases](https://github.com/mikefdy/polymarket-tool/releases):
+
+**macOS (Apple Silicon):**
+```bash
+curl -L -o polymarket-tool https://github.com/mikefdy/polymarket-tool/releases/latest/download/polymarket-tool-darwin-arm64
+chmod +x polymarket-tool
+```
+
+**macOS (Intel):**
+```bash
+curl -L -o polymarket-tool https://github.com/mikefdy/polymarket-tool/releases/latest/download/polymarket-tool-darwin-amd64
+chmod +x polymarket-tool
+```
+
+**Linux:**
+```bash
+curl -L -o polymarket-tool https://github.com/mikefdy/polymarket-tool/releases/latest/download/polymarket-tool-linux
+chmod +x polymarket-tool
+```
+
+**Windows (PowerShell):**
+```powershell
+Invoke-WebRequest -Uri https://github.com/mikefdy/polymarket-tool/releases/latest/download/polymarket-tool.exe -OutFile polymarket-tool.exe
+```
+
+### Build from source
+
+Requires Go 1.21+:
+
 ```bash
 go build -o polymarket-tool .
 ```
-
-Or download a pre-built binary from releases.
 
 ## Quick Start
 
@@ -188,16 +215,17 @@ WEBHOOK_URL=https://discord.com/api/webhooks/xxx/yyy \
 ./polymarket-tool start
 ```
 
-## Building
+## Building from Source
+
+Requires Go 1.21+:
 
 ```bash
 # Build for current platform
 go build -o polymarket-tool .
 
-# Build for Linux
+# Cross-compile for other platforms
 GOOS=linux GOARCH=amd64 go build -o polymarket-tool-linux .
-
-# Build for Windows
+GOOS=darwin GOARCH=arm64 go build -o polymarket-tool-darwin-arm64 .
 GOOS=windows GOARCH=amd64 go build -o polymarket-tool.exe .
 ```
 
