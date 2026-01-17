@@ -157,6 +157,12 @@ polymarket-tool list whales
 # List saved markets
 polymarket-tool list markets
 
+# Clear all saved markets
+polymarket-tool list clear-markets
+
+# Clear all tracked whales
+polymarket-tool list clear-whales
+
 # Remove a whale
 polymarket-tool list remove-whale 0x123...
 

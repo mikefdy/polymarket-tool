@@ -1,17 +1,37 @@
 package types
 
+type MarketEvent struct {
+	Slug  string `json:"slug"`
+	Title string `json:"title"`
+}
+
 type Market struct {
-	ID          string   `json:"id"`
-	ConditionID string   `json:"conditionId"`
-	Question    string   `json:"question"`
-	Slug        string   `json:"slug"`
-	Outcomes    string   `json:"outcomes"`
-	ClobTokens  string   `json:"clobTokenIds"`
-	Volume      string   `json:"volume"`
-	Liquidity   string   `json:"liquidity"`
-	Active      bool     `json:"active"`
-	Closed      bool     `json:"closed"`
-	CreatedAt   string   `json:"createdAt"`
+	ID          string        `json:"id"`
+	ConditionID string        `json:"conditionId"`
+	Question    string        `json:"question"`
+	Slug        string        `json:"slug"`
+	Outcomes    string        `json:"outcomes"`
+	ClobTokens  string        `json:"clobTokenIds"`
+	Volume      string        `json:"volume"`
+	Liquidity   string        `json:"liquidity"`
+	Active      bool          `json:"active"`
+	Closed      bool          `json:"closed"`
+	CreatedAt   string        `json:"createdAt"`
+	Events      []MarketEvent `json:"events"`
+}
+
+func (m *Market) EventSlug() string {
+	if len(m.Events) > 0 && m.Events[0].Slug != "" {
+		return m.Events[0].Slug
+	}
+	return m.Slug
+}
+
+func (m *Market) EventTitle() string {
+	if len(m.Events) > 0 && m.Events[0].Title != "" {
+		return m.Events[0].Title
+	}
+	return m.Question
 }
 
 type Event struct {

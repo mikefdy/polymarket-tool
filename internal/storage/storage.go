@@ -160,3 +160,21 @@ func RemoveMarket(slug string) (bool, error) {
 
 	return true, SaveMarkets(filtered)
 }
+
+func ClearMarkets() (int, error) {
+	markets, err := LoadMarkets()
+	if err != nil {
+		return 0, err
+	}
+	count := len(markets)
+	return count, SaveMarkets([]types.SavedMarket{})
+}
+
+func ClearWhales() (int, error) {
+	whales, err := LoadWhales()
+	if err != nil {
+		return 0, err
+	}
+	count := len(whales)
+	return count, SaveWhales([]types.Whale{})
+}

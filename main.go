@@ -302,10 +302,14 @@ func cmdMarkets(args []string) {
 	}
 
 	// Group by event slug to avoid duplicates
-	eventSlugs := make(map[string]types.Market)
+	eventMap := make(map[string]types.Market)
 	for _, m := range markets {
-		if m.Slug != "" {
-			eventSlugs[m.Slug] = m
+		eventSlug := m.EventSlug()
+		if eventSlug != "" {
+			// Keep first market per event (has the event info)
+			if _, exists := eventMap[eventSlug]; !exists {
+				eventMap[eventSlug] = m
+			}
 		}
 	}
 
@@ -316,20 +320,20 @@ func cmdMarkets(args []string) {
 		savedSlugs[sm.Slug] = true
 	}
 
-	// Display markets
-	fmt.Println("  #  | Market                                           | Volume       | Status")
+	// Display events
+	fmt.Println("  #  | Event                                            | Volume       | Status")
 	fmt.Println("-----+--------------------------------------------------+--------------+--------")
 
 	idx := 0
-	slugList := make([]string, 0, len(eventSlugs))
-	for slug, m := range eventSlugs {
+	slugList := make([]string, 0, len(eventMap))
+	for eventSlug, m := range eventMap {
 		idx++
 		status := ""
-		if savedSlugs[slug] {
+		if savedSlugs[eventSlug] {
 			status = "✓ saved"
 		}
 
-		title := m.Question
+		title := m.EventTitle()
 		if len(title) > 48 {
 			title = title[:48]
 		}
@@ -340,7 +344,7 @@ func cmdMarkets(args []string) {
 		}
 
 		fmt.Printf("  %2d | %-48s | %12s | %s\n", idx, title, formatUSD(vol), status)
-		slugList = append(slugList, slug)
+		slugList = append(slugList, eventSlug)
 	}
 
 	fmt.Println()
@@ -357,9 +361,9 @@ func cmdMarkets(args []string) {
 
 	switch {
 	case strings.ToLower(selection) == "all":
-		for slug := range eventSlugs {
-			if !savedSlugs[slug] {
-				toAdd = append(toAdd, slug)
+		for eventSlug := range eventMap {
+			if !savedSlugs[eventSlug] {
+				toAdd = append(toAdd, eventSlug)
 			}
 		}
 	default:
@@ -367,41 +371,42 @@ func cmdMarkets(args []string) {
 		for _, n := range nums {
 			idx, err := strconv.Atoi(strings.TrimSpace(n))
 			if err == nil && idx > 0 && idx <= len(slugList) {
-				slug := slugList[idx-1]
-				if !savedSlugs[slug] {
-					toAdd = append(toAdd, slug)
+				eventSlug := slugList[idx-1]
+				if !savedSlugs[eventSlug] {
+					toAdd = append(toAdd, eventSlug)
 				}
 			}
 		}
 	}
 
 	if len(toAdd) == 0 {
-		fmt.Println("No new markets to add.")
+		fmt.Println("No new events to add.")
 		return
 	}
 
-	fmt.Printf("\nAdding %d markets...\n", len(toAdd))
+	fmt.Printf("\nAdding %d events...\n", len(toAdd))
 
-	for _, slug := range toAdd {
-		m := eventSlugs[slug]
-		title := m.Question
-		if len(title) > 50 {
-			title = title[:50] + "..."
+	for _, eventSlug := range toAdd {
+		m := eventMap[eventSlug]
+		eventTitle := m.EventTitle()
+		displayTitle := eventTitle
+		if len(displayTitle) > 50 {
+			displayTitle = displayTitle[:50] + "..."
 		}
 
 		added, _ := storage.AddMarket(types.SavedMarket{
-			Slug:    slug,
-			Title:   m.Question,
+			Slug:    eventSlug,
+			Title:   eventTitle,
 			AddedAt: time.Now().Format(time.RFC3339),
 		})
 
 		if added {
-			fmt.Printf("  ✓ Added: %s\n", title)
+			fmt.Printf("  ✓ Added: %s\n", displayTitle)
 		}
 	}
 
 	markets2, _ := storage.LoadMarkets()
-	fmt.Printf("\nNow tracking %d markets total.\n", len(markets2))
+	fmt.Printf("\nNow tracking %d events total.\n", len(markets2))
 }
 
 // ============= ADD-MARKET COMMAND =============
@@ -707,7 +712,7 @@ func cmdWhaleTrades(args []string) {
 
 func cmdList(args []string) {
 	if len(args) < 1 {
-		fmt.Println("Usage: polymarket-tool list <whales|markets|remove-whale|remove-market>")
+		fmt.Println("Usage: polymarket-tool list <whales|markets|clear-whales|clear-markets|remove-whale|remove-market>")
 		return
 	}
 
@@ -768,6 +773,22 @@ func cmdList(args []string) {
 		} else {
 			fmt.Println("Market not found")
 		}
+
+	case "clear-markets":
+		count, err := storage.ClearMarkets()
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+		fmt.Printf("✓ Cleared %d markets\n", count)
+
+	case "clear-whales":
+		count, err := storage.ClearWhales()
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+		fmt.Printf("✓ Cleared %d whales\n", count)
 
 	default:
 		fmt.Printf("Unknown list type: %s\n", args[0])
